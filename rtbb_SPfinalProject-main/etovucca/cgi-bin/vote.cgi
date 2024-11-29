@@ -3,6 +3,9 @@
 import cgi
 import subprocess
 import json
+import sqlite3
+import time
+
 
 PATH_TO_MACHINE = "./etovucca"
 PATH_TO_SQLITE = "./sqlite3"
@@ -31,16 +34,27 @@ try:
         ids = form.getvalue('election').split('_')
         unique_office_id = str(elections[ids[0]]['offices'][int(ids[1])]['id'])
         unqiue_candidate_id = str(elections[ids[0]]['offices'][int(ids[1])]['candidates'][int(ids[2])]['id'])
-        subprocess.check_output(
-            [PATH_TO_MACHINE, 'vote', form.getvalue('voterId'), str(convert_date_to_id(ids[0])), unique_office_id, unqiue_candidate_id])
-        print('<b>Sucessfully cast ballot.</b>')
-        print('<ul>')
-        print('<li>Election Date: {}</li>'.format(ids[0]))
-        print(
-            '<li>Office: {}</li>'.format(elections[ids[0]]['offices'][int(ids[1])]['name']))
-        print('<li>Candidate: {}</li>'.format(
-            elections[ids[0]]['offices'][int(ids[1])]['candidates'][int(ids[2])]['name']))
-        print('</ul>')
+        conn = sqlite3.connect(PATH_TO_DB)
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT COUNT(*) FROM Vote WHERE voter=? AND office=?", (form.getvalue('voterId'), unique_office_id))
+        vote_count = cursor.fetchone()[0]
+
+        if vote_count == 0:
+            time.sleep(5) 
+            try:
+                cursor.execute("INSERT INTO Vote (voter, candidate, office) VALUES (?, ?, ?)", 
+               (form.getvalue('voterId'), unqiue_candidate_id, unique_office_id))
+
+                conn.commit()
+                print('<b>Successfully cast ballot.</b>')
+            except sqlite3.IntegrityError:
+                print('<b>Error: You have already voted for this office.</b>')
+                
+        else:
+            print('<b>Error: You have already voted for this office.</b>')
+
+        conn.close()
     else:
         print('<form method="post">')
         print('<label for="voterId">Voter ID</label><br>')

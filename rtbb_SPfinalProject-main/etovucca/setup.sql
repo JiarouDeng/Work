@@ -52,8 +52,7 @@ DROP TABLE IF EXISTS Vote;
 CREATE TABLE Vote (
   voter INTEGER REFERENCES Registration (id),
   candidate INTEGER REFERENCES Candidate (id),
-  office INTEGER REFERENCES Office (id),
-  UNIQUE(voter,office)
+  office INTEGER REFERENCES Office (id)
 );
 
 .quit

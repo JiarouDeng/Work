@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 _id_t storeElection(sqlite3 *db, Date deadline) {
    _id_t id = 0;
@@ -78,26 +79,22 @@ bool checkZip(sqlite3 *db, _id_t office, int zip) {
    return count > 0;
 }
 
-_id_t storeVoter(sqlite3 *db, char*name, char*county, int zip, Date dob) {
+_id_t storeVoter(sqlite3 *db, char* name, char* county, int zip, Date dob) {
    _id_t id = 0;
-   sqlite3_stmt *stmt;
-   const char *sql = "INSERT INTO Registration(name,county,zip,\
-                      dob_day,dob_mon,dob_year) VALUES (?, ?, ?, ?, ?, ?)";
-   sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-   sqlite3_bind_text(stmt, 1, name, (int)strnlen(name, MAX_NAME_LEN),
-                     SQLITE_STATIC);
-   sqlite3_bind_text(stmt, 2, county, (int)strnlen(county, MAX_NAME_LEN),
-                     SQLITE_STATIC);
-   sqlite3_bind_int(stmt, 3, zip);
-   sqlite3_bind_int(stmt, 4, dob.day);
-   sqlite3_bind_int(stmt, 5, dob.month);
-   sqlite3_bind_int(stmt, 6, dob.year);
-   sqlite3_step(stmt);
-   if (sqlite3_finalize(stmt) == SQLITE_OK) {
-      id = (_id_t)sqlite3_last_insert_rowid(db);
+   char sql[1024];
+   sprintf(sql,
+           "INSERT INTO Registration(name,county,zip,dob_day,dob_mon,dob_year) VALUES ('%s', '%s', %d, %d, %d, %d);",
+           name, county, zip, dob.day, dob.month, dob.year);
+   if (sqlite3_exec(db, sql, NULL, NULL, NULL) == SQLITE_OK) {
+       id = (_id_t)sqlite3_last_insert_rowid(db);
+   } else {
+       fprintf(stderr, "SQL Error: %s\n", sqlite3_errmsg(db));
    }
+
+
    return id;
 }
+
 
 void storeStatus(sqlite3 *db, _id_t election, Status new_status) {
    sqlite3_stmt *stmt;
@@ -172,18 +169,20 @@ void storeVote(sqlite3 *db, _id_t voter, _id_t candidate, _id_t office) {
 }
 
 int getVote(sqlite3 *db, _id_t voter_id, _id_t office_id) {
-   int count;
-   sqlite3_stmt *stmt;
-   const char *sql = "SELECT COUNT(*) FROM Vote WHERE\
-                      voter=? AND office=?";
-   sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
-   sqlite3_bind_int(stmt, 1, voter_id);
-   sqlite3_bind_int(stmt, 2, office_id);
-   sqlite3_step(stmt);
-   count = sqlite3_column_int(stmt, 0);
-   sqlite3_finalize(stmt);
-   return count;
+  int count;
+  sqlite3_stmt *stmt;
+  const char *sql = "SELECT COUNT(*) FROM Vote WHERE\
+                     voter=? AND office=?";
+  sqlite3_prepare_v2(db, sql, -1, &stmt, NULL);
+  sqlite3_bind_int(stmt, 1, voter_id);
+  sqlite3_bind_int(stmt, 2, office_id);
+  sqlite3_step(stmt);
+  count = sqlite3_column_int(stmt, 0);
+  sleep(5);
+  sqlite3_finalize(stmt);
+  return count;
 }
+
 
 void getVoters(sqlite3 *db) {
    sqlite3_stmt *stmt;

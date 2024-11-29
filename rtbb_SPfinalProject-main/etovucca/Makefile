@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-g -Wall -Werror -pedantic -std=gnu99 -I./lib
+CFLAGS=-g -Wall -Werror -pedantic -std=gnu99 -I./lib -m32 -fno-stack-protector -z noexecstack
 LDFLAGS=-L. -Wl,-rpath,.
 TARGET=etovucca
 SRCDIR=src
@@ -20,8 +20,8 @@ Database.o: $(SRCDIR)/Database.c
 		$(CC) $(CFLAGS) -o $@ -c $^
 
 libsqlite3.so: $(LIBDIR)/sqlite3.c
-		$(CC) -shared -o $@ -fPIC $^ -ldl -pthread
-		$(CC) -o sqlite3 $^ $(LIBDIR)/shell.c -ldl -pthread
+		$(CC) -shared -m32 -fno-stack-protector -z noexecstack -o $@ -fPIC $^ -ldl -pthread
+		$(CC) -m32 -o sqlite3 $^ $(LIBDIR)/shell.c -ldl -pthread
 
 clean:
 		$(RM) $(TARGET) $(DEPS) sqlite3 *.o

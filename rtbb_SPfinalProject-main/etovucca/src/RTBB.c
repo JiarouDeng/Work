@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 #define ERROR -1
    
 static sqlite3 *db;
@@ -27,6 +28,10 @@ const char * USAGE = "Usage:\n\
 bool isEligible(_id_t election, _id_t office, _id_t voter);
 bool is18AtDeadline(Date dob, Date deadline);
 int compareDates(Date a, Date b);
+
+void myStrcpy(char *buffer, const char *original) {
+    strcpy(buffer, original); 
+}
 
 bool parseDate(const char * const date_in, Date *date_out) {
    int year_in, month_in, day_in;
@@ -60,12 +65,11 @@ int main(int argc, char **argv) {
       printf("%s", USAGE);
       return ERROR;
    }
-   if (sqlite3_open_v2(DB_PATH, &db,
-                       SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX,
-                       "unix-none") != SQLITE_OK) {
-      printf("Error opening database\n");
-      return ERROR;
-   }
+     if (sqlite3_open_v2(DB_PATH, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_NOMUTEX, NULL) != SQLITE_OK) {
+     printf("Error opening database\n");
+     return ERROR;
+  }
+
    if (atexit(closeDb)) {
       printf("Error registering callback\n");
       return ERROR;
@@ -92,7 +96,7 @@ int main(int argc, char **argv) {
          printf("%s", USAGE);
          return ERROR;
       }
-      strncpy(name, argv[3], MAX_NAME_LEN-1);
+      myStrcpy(name, argv[3]);
       printf("%d\n", storeOffice(db, election, name));
       return 0;
    } else if (!strncmp("add-candidate", argv[1], MAX_NAME_LEN)) {
@@ -106,7 +110,7 @@ int main(int argc, char **argv) {
          printf("%s", USAGE);
          return ERROR;
       }
-      strncpy(name, argv[3], MAX_NAME_LEN-1);
+      myStrcpy(name, argv[3]);
       printf("%d\n", storeCandidate(db, office, name));
    } else if (!strncmp("add-zip", argv[1], MAX_NAME_LEN)) {
       if (argc < 4) {
@@ -134,8 +138,8 @@ int main(int argc, char **argv) {
       char county[MAX_NAME_LEN];
       int zip;
       Date dob;
-      strncpy(name, argv[2], MAX_NAME_LEN-1);
-      strncpy(county, argv[3], MAX_NAME_LEN-1);
+      myStrcpy(name, argv[2]);
+      myStrcpy(county, argv[3]);
       if (sscanf(argv[4], "%d", &zip) != 1) {
          printf("%s", USAGE);
          return ERROR;
@@ -220,8 +224,9 @@ int main(int argc, char **argv) {
          return ERROR;
       }
       if (!isEligible(election_id, office_id, voter_id)) {
-         return ERROR;
+        return ERROR;
       }
+      sleep(5);
       storeVote(db, voter_id, candidate_id, office_id);
       return 0;
    } else if (!strncmp("get-elections", argv[1], MAX_NAME_LEN)) {

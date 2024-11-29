@@ -35,7 +35,8 @@ def render_elections(elections, status):
             elections_category.append('<ul>')
             for oid in range(0, len(elections[date]['offices'])):
                 office = elections[date]['offices'][oid]
-                elections_category.append('<li>Office ID {}: {}'.format(office['id'], office['name']))
+                elections_category.append('<li>Office ID {}: {}</li>'.format(office['id'], office['name']))
+
                 elections_category.append('<ul>')
                 zips = "<li>Eligible ZIP Codes:"
                 for zipC in office['zips']:
@@ -98,6 +99,7 @@ try:
             election_id = convert_date_to_id(form.getvalue('election'))
             subprocess.check_output([PATH_TO_MACHINE, 'add-office', str(election_id), form.getvalue('addOffice')])
             print('<b>Successfully added {} to election {}</b>'.format(form.getvalue('addOffice'), form.getvalue('election')))
+
         elif 'addCandidate' in form:
             subprocess.check_output([PATH_TO_MACHINE, 'add-candidate', form.getvalue('office'), form.getvalue('addCandidate')])
             print('<b>Successfully added candidate {} to office {}</b>'.format(form.getvalue('addCandidate'), form.getvalue('office')))
@@ -172,13 +174,39 @@ try:
 
     print('<hr>')
 
+
+
     print('<h3>Voter Rolls</h3>')
-    json_voters = subprocess.check_output([PATH_TO_MACHINE, "get-voters"]).decode('utf-8')
-    voters = json.loads(json_voters)
-    print('<ul>')
-    for voter in voters:
-        print('<li>{} ({}): {}, {}'.format(voter['name'], voter['dob'], voter['county'], voter['zip']))
-    print('</ul>')
+    json_voters = subprocess.check_output([PATH_TO_MACHINE, "get-voters"]).decode('latin-1')
+    try:
+        voters_list = json_voters.strip('[\n]').split('},\n')
+        print('<ul>')
+        for voter_json in voters_list:
+            if voter_json:
+                if not voter_json.endswith('}'):
+                    voter_json += '}'
+                try:
+                    voter = json.loads(voter_json)
+                    print('<li>{} ({}): {}, {}'.format(
+                        voter['name'],
+                        voter['dob'],
+                        voter['county'],  
+                        voter['zip']
+                    ))
+                except:
+                    print('<li>' + voter_json + '</li>')
+        print('</ul>')
+    except Exception as e:
+        print('<pre>')
+        print(json_voters)
+        print('</pre>')
+
+
+    except Exception as e:
+        raw_output = subprocess.check_output([PATH_TO_MACHINE, "get-voters"])
+        print('<ul><li>' + str(raw_output) + '</li></ul>')
+
+
 except subprocess.CalledProcessError as e:
     print('<br><b>Error rendering interface:</b>')
     print('<code>')
